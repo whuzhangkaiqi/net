@@ -13,9 +13,10 @@ Logger& Logger::instance()
 int Logger::setLogLevel(int level)
 {
     logLevel_ = level;
+    return logLevel_;
 }
 // 写日志 [logLevel] time : msg
-void Logger::log(std::string& msg)
+void Logger::log(std::string msg)
 {
     switch (logLevel_)
     {

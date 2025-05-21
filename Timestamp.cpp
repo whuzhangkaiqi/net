@@ -14,11 +14,11 @@ Timestamp::Timestamp(int64_t microSecondsSinceEpoch)
 {
 
 }
-Timestamp::Timestamp(Timestamp& other)
-    : microSecondsSinceEpoch_(other.microSecondsSinceEpoch_)
-{
+// Timestamp::Timestamp(Timestamp& other)
+//     : microSecondsSinceEpoch_(other.microSecondsSinceEpoch_)
+// {
 
-}
+// }
 Timestamp Timestamp::now()
 {
     return Timestamp(time(nullptr));

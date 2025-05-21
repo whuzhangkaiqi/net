@@ -8,7 +8,7 @@
 #define LOG_INFO(logformatmsg, ...)                       \
     do                                                    \
     {                                                     \
-        Logger logger = Logger::instance();               \
+        Logger& logger = Logger::instance();               \
         logger.setLogLevel(INFO);                         \
         char buf[1024] = {0};                             \
         snprintf(buf, 1024, logformatmsg, ##__VA_ARGS__); \
@@ -17,7 +17,7 @@
 #define LOG_ERROR(logformatmsg, ...)                       \
     do                                                    \
     {                                                     \
-        Logger logger = Logger::instance();               \
+        Logger& logger = Logger::instance();               \
         logger.setLogLevel(ERROR);                         \
         char buf[1024] = {0};                             \
         snprintf(buf, 1024, logformatmsg, ##__VA_ARGS__); \
@@ -26,7 +26,7 @@
 #define LOG_FATAL(logformatmsg, ...)                       \
     do                                                    \
     {                                                     \
-        Logger logger = Logger::instance();               \
+        Logger& logger = Logger::instance();               \
         logger.setLogLevel(FATAL);                         \
         char buf[1024] = {0};                             \
         snprintf(buf, 1024, logformatmsg, ##__VA_ARGS__); \
@@ -36,13 +36,15 @@
 #define LOG_DEBUG(logformatmsg, ...)                       \
     do                                                    \
     {                                                     \
-        Logger logger = Logger::instance();               \
+        Logger& logger = Logger::instance();               \
         logger.setLogLevel(DEBUG);                         \
         char buf[1024] = {0};                             \
         snprintf(buf, 1024, logformatmsg, ##__VA_ARGS__); \
         logger.log(buf);                                  \
     } while (0);
-#else #define LOG_DEBUG(logformatmsg, ...)
+#else 
+#define LOG_DEBUG(logformatmsg, ...)\
+    do{}while(0)
 #endif
 
 // 定义日志的级别 INFO WARN ERROR FATAL DEBUG
@@ -63,12 +65,12 @@ class Logger : noncopyable
         // 设置日志级别
         int setLogLevel(int level);
         // 写日志
-        void log(std::string& msg);
+        void log(std::string msg);
 
     protected:
     private:
         // 日志级别
         int logLevel_;
         // 构造函数私有化
-        Logger();
+        Logger() {}
 };
