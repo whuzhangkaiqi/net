@@ -23,14 +23,15 @@
         snprintf(buf, 1024, logformatmsg, ##__VA_ARGS__); \
         logger.log(buf);                                  \
     } while (0);
-#define LOG_FATAL(logformatmsg, ...)                       \
+#define LOG_FATAL(logformatmsg, ...)                      \
     do                                                    \
     {                                                     \
-        Logger& logger = Logger::instance();               \
-        logger.setLogLevel(FATAL);                         \
+        Logger &logger = Logger::instance();              \
+        logger.setLogLevel(FATAL);                        \
         char buf[1024] = {0};                             \
         snprintf(buf, 1024, logformatmsg, ##__VA_ARGS__); \
         logger.log(buf);                                  \
+        exit(0);\
     } while (0);
 #ifdef MUDEBUG
 #define LOG_DEBUG(logformatmsg, ...)                       \
