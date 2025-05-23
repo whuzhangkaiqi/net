@@ -14,7 +14,7 @@ class Channel;
  * epoll_ctl，添加感兴趣的事件 add/ modify/ del
  * epoll_wait，监听
  */
-class EPollPoller : Poller
+class EPollPoller : public Poller
 {
     public:
         EPollPoller(EventLoop *loop);

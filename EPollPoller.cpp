@@ -50,7 +50,7 @@ Timestamp EPollPoller::poll(int timeoutMs, ChannelList* activeChannels)
             }
         }
     }
-
+    
     return now;
 }
 
