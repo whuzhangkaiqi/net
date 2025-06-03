@@ -4,6 +4,7 @@
 #include "Callback.hpp"
 #include "Buffer.hpp"
 #include "Timestamp.hpp"
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <atomic>
@@ -25,7 +26,7 @@ class TcpConnection : noncopyable, public std::enable_shared_from_this<TcpConnec
         bool connected() const { return state_ == kConnected; }
         bool disconnected() const { return state_ == kDisconnected; }
 
-        void send(const void *message, int len);
+        void send(const std::string& buf);
         // 关闭当前连接
         void shutdown();
 

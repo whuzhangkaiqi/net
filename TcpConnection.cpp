@@ -1,4 +1,5 @@
 #include "TcpConnection.hpp"
+#include "Callback.hpp"
 #include "Logger.hpp"
 #include "Channel.hpp"
 #include "Socket.hpp"
@@ -12,6 +13,7 @@
 #include <strings.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string>
 static EventLoop* CheckLoopNotNull(EventLoop* loop)
 {
     if (loop == nullptr)
@@ -116,4 +118,104 @@ void TcpConnection::handleError()
         err = optval;
     }
     LOG_ERROR("TcpConnection::handleError name:%s - SO_ERROR:%d \n", name_.c_str(), err);
+}
+
+void TcpConnection::send(const std::string& buf)
+{
+    if (state_ == kConnected)
+    {
+        if(loop_->isInLoopThread())
+        {
+            sendInLoop(buf.c_str(), buf.size());
+        }
+        else
+        {
+            loop_->runInLoop(std::bind(&TcpConnection::sendInLoop, this, buf.c_str(), buf.size()));
+        }
+    }
+}
+
+void TcpConnection::sendInLoop(const void *message, size_t len)
+{
+    ssize_t nwrote = 0;
+    size_t remaining = len;
+    bool faultError = false;
+    // 之前已经调用了connection的shutdown
+    if (state_ == kDisconnected)
+    {
+        LOG_ERROR("disconnected, give up writing \n");
+        return;
+    }
+    if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0)
+    {
+        nwrote = ::write(channel_->fd(), message, len);
+        if (nwrote >= 0)
+        {
+            remaining = len - nwrote;
+            // 数据一次性发送完成，不需要再给channel设置epollout事件了
+            if (remaining == 0 && writeCompleteCallback_)
+            {
+                loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this()));
+            }
+        }
+        else
+        {
+            nwrote = 0;
+            if (errno != EWOULDBLOCK)
+            {
+                LOG_ERROR("TcpConnection::sendInLoop");
+                if (errno == EPIPE || errno == ECONNRESET) // SIGPIPE RESET
+                {
+                    faultError = true;
+                }
+            }
+        }
+    }
+    if (!faultError && remaining > 0) // 说明一次write没有发送完毕全部数据，剩余数据需要保存到缓冲区中，然后给channel注册epollout事件
+    {
+        size_t oldLen = outputBuffer_.readableBytes(); // 目前缓冲区待发送长度
+        if (oldLen + remaining > highWaterMark_ && oldLen < highWaterMark_ && highWaterMarkCallback_)
+        {
+            loop_->queueInLoop(std::bind(highWaterMarkCallback_, shared_from_this(), oldLen + remaining));
+        }
+        outputBuffer_.append((char *)message + nwrote, remaining);
+        if (!channel_->isWriting())
+        {
+            channel_->enableWriting(); // 这里一定要给channel注册写事件，否则poller不会通知epollout，没办法调用channel处理写事件的回调，也就没办法调用handlewrite
+        }
+    }
+}
+
+void TcpConnection::shutdown()
+{
+    if (state_ == kConnected)
+    {
+        setState(kDisconnecting);
+        loop_->runInLoop(std::bind(&TcpConnection::shutdownInLoop, this));
+    }
+}
+void TcpConnection::shutdownInLoop()
+{
+    if(!channel_->isWriting()) // 说明当前outputBuffer中的数据已经全部发送完成
+    {
+        socket_->shutdownwrite(); // 关闭写端
+    }
+}
+
+void TcpConnection::connectEstablished() // tcpConnection是给到用户调用的，所以要考虑到可能的链接断开情况
+{
+    setState(kConnected);
+    channel_->tie(shared_from_this()); // 因为channel调用的回调都是tcpConnection绑定的，所以要避免对应的链接被释放掉。
+    channel_->enableReading(); // 向Poller注册EPOLLIN事件
+    connectionCallback_(shared_from_this());
+}
+void TcpConnection::connectDestroyed()
+{
+    if (state_ == kConnected)
+    {
+        setState(kDisconnected);
+        channel_->disableAll();
+        connectionCallback_(shared_from_this());
+    }
+    channel_->remove(); // 把Channel从Poller中删除掉
 }
