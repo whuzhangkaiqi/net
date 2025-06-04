@@ -27,7 +27,7 @@ Timestamp EPollPoller::poll(int timeoutMs, ChannelList* activeChannels)
     LOG_INFO("function=%s => fd total count: %lu \n", __FUNCTION__, channels_.size());
     int numEvents = ::epoll_wait(epollfd_, &*events_.begin(), static_cast<int>(events_.size()), timeoutMs);
     int saveErrno = errno;
-    Timestamp now = Timestamp::now();
+    Timestamp now(Timestamp::now());
 
     if (numEvents > 0)
     {
@@ -37,20 +37,19 @@ Timestamp EPollPoller::poll(int timeoutMs, ChannelList* activeChannels)
         {
             events_.resize(events_.size() * 2);
         }
-        else if (numEvents == 0)
+    }
+    else if (numEvents == 0)
+    {
+        LOG_INFO("function=%s timeout! \n", __FUNCTION__);
+    }
+    else
+    {
+        if (saveErrno != EINTR)
         {
-            LOG_INFO("function=%s timeout! \n", __FUNCTION__);
-        }
-        else
-        {
-            if (saveErrno != EINTR)
-            {
-                errno = saveErrno;
-                LOG_ERROR("EPollPoller::poll error!");
-            }
+            errno = saveErrno; 
+            LOG_ERROR("EPollPoller::poll error! errno = %d", errno);
         }
     }
-    
     return now;
 }
 

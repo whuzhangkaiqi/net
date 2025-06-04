@@ -21,7 +21,8 @@ TcpServer::TcpServer(EventLoop *loop, const InetAddress &listenAddr, const std::
     threadPool_(new EventLoopThreadPool(loop, name_)),
     connectionCallback_(),
     messageCallback_(),
-    nextConnId_(1)
+    nextConnId_(1),
+    started_(0)
 {
     acceptor_->setNewConnectionCallback(std::bind(&TcpServer::newConnection, this, std::placeholders::_1, std::placeholders::_2));
 }
